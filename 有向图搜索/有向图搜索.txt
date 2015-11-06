@@ -1,0 +1,760 @@
+      有向图的搜索
+从一个点或一些点出发，按某种顺序或方式，经过图中的弧可到达新点，
+一系列此种访问综合而成的过程就形成了有向图的搜索。
+先通过暑假曾经留过的一道练习题来总结对比最常用的搜索算法——深搜、广搜、拓扑、单源最短路在有向图处理中的应用。
+例题一 NOIP提高组2009 3．最优贸易(trade.pas/c/cpp) 
+【问题描述】
+C 国有n 个大城市和m 条道路，每条道路连接这n 个城市中的某两个城市。任意两个城市之间最多只有一条道路直接相连。这m 条道路中有一部分为单向通行的道路，一部分为双向通行的道路，双向通行的道路在统计条数时也计为1 条。
+C 国幅员辽阔，各地的资源分布情况各不相同，这就导致了同一种商品在不同城市的价格不一定相同。但是，同一种商品在同一个城市的买入价和卖出价始终是相同的。
+商人阿龙来到C 国旅游。当他得知同一种商品在不同城市的价格可能会不同这一信息之后，便决定在旅游的同时，利用商品在不同城市中的差价赚回一点旅费。设C 国n 个城市的标号从1~ n，阿龙决定从1 号城市出发，并最终在n 号城市结束自己的旅行。在旅游的过程中，任何城市可以重复经过多次，但不要求经过所有n 个城市。阿龙通过这样的贸易方式赚取旅费：他会选择一个经过的城市买入他最喜欢的商品——水晶球，并在之后经过的另一个城市卖出这个水晶球，用赚取的差价当做旅费。由于阿龙主要是来C 国旅游，他决定这个贸易只进行最多一次，当然，在赚不到差价的情况下他就无需进行贸易。
+假设C 国有5 个大城市，城市的编号和道路连接情况如下图，单向箭头表示这条道路为单向通行，双向箭头表示这条道路为双向通行。
+假设1~n 号城市的水晶球价格分别为4，3，5，6，1。阿龙可以选择如下一条线路：1->2->3->5 ，并在2 号城市以3 的价格买入水晶球，在3 号城市以5 的价格卖出水晶球，赚取的旅费数为2。阿龙也可以选择如下一条线路1->4->5->4->5 ，并在第1 次到达5 号城市时以1 的价格买入水晶球，在第2 次到达4 号城市时以6 的价格卖出水晶球，赚取的旅费数为5。
+现在给出n个城市的水晶球价格，m 条道路的信息（每条道路所连接的两个城市的编号以及该条道路的通行情况）。请你告诉阿龙，他最多能赚取多少旅费。
+【输入】
+输入文件名为trade.in 。
+第一行包含2 个正整数n 和m，中间用一个空格隔开，分别表示城市的数目和道路的数目。
+第二行n 个正整数，每两个整数之间用一个空格隔开，按标号顺序分别表示这n 个城市的商品价格。
+接下来m 行，每行有3 个正整数，x，y，z，每两个整数之间用一个空格隔开。如果z=1， 表示这条道路是城市x 到城市y 之间的单向道路；如果z=2，表示这条道路为城市x 和城市y 之间的双向道路。
+【输出】
+输出文件trade.out 共1 行，包含1 个整数，表示最多能赚取的旅费。如果没有进行贸易，则输出0。
+【输入输出样例】
+trade.in 	trade.out 
+5 5 	5 
+4 3 5 6 1 	
+1 2 1 	
+1 4 1 	
+2 3 2 	
+3 5 1 	
+4 5 2 	
+【数据范围】
+输入数据保证1 号城市可以到达n 号城市。
+对于10% 的数据，1≤n≤6。
+对于30% 的数据，1≤n≤100 。
+对于50% 的数据，不存在一条旅游路线，可以从一个城市出发，再回到这个城市。
+对于100% 的数据，1≤n≤100000，1≤m≤500000，1≤x，y≤n，1≤z≤2，1≤各城市水晶球价格≤100 。
+
+分析：如果有向图没有圈，用拓扑结合动归是一个恰当的解决方案，可惜仅一半的数据有此保证。
+当然，坚持要按拓扑顺序动归的思路，也可以把图转换为拓扑，详见后面方法4。
+在没有得到更有把握的算法时，不妨直接拓扑。
+方法1 拓扑结合动归。两个状态函数为
+①从1出发走到x的最低买入价： g[x]
+②目标函数：从1出发走到x能赚的最多的钱：f[x]
+#include<cstdlib>
+#include<iostream>
+using namespace std;
+struct node
+{//用于建链式邻接表
+  int data;
+  node *next;
+};
+int f[100001],g[100001],a[100001],s[100001],b[100001],d,e,z,n,m,i,j,u,v,w;
+node *h[100001],*p;
+int main()
+{
+cin>>n>>m;
+for (i=1;i<=n;i++)
+  {
+  cin>>a[i];
+  g[i]=a[i];//对买入水晶球的最低价初始化
+  }
+for (i=1;i<=m;i++)
+  {
+  cin>>u>>v>>w;
+  p=new node;
+  b[v]++;//逆邻接计数器
+  (*p).data=v;
+  (*p).next=h[u];
+  h[u]=p;//在链头插入
+  }
+z=0;//拓扑栈指针
+s[0]=1;//栈底初始化
+do
+  {
+  d=s[z--];
+  p=h[d];
+  while(p>0)
+    {e=p->data;
+    if(g[d]<g[e])
+      g[e]=g[d];
+    if (f[d]>f[e])
+      f[e]=f[d];
+    b[e]--;//入度计数器
+    if(b[e]==0)
+      {
+      z++;
+      s[z]=e;
+      if(a[e]-g[e]>f[e])//可能在本地卖
+        f[e]=a[e]-g[e];
+    }
+    p=p->next;
+    }
+  }while(z>=0);
+cout<<f[n]<<endl;
+system("PAUSE");
+return 0;
+}
+显然对于1号点不能到达或该点无法去到n的点，即使能赚到再多的钱，也不属于我们研究的对象（当然，拓扑动归时可忽略此担心）。
+如果先排除此二类点，就可以按某种贪心的顺序搜出最优解。
+排除过程可能需要正向和反向的两次搜索。这两次搜索用广搜或染色式深搜都可奏效，
+通过搜索，还可顺便把城市按水晶球价格分类造表。最后再根据“低进高出”的原则进行一轮贪心式广搜就可得到答案了。
+方法2 正、反、贪三轮搜索
+//10.in 210ms
+#include<iostream>
+#include<vector>
+#include<list>
+#include<algorithm>
+using namespace std;
+vector<int> a[100086],b[100086];
+int flag[100086], p[100086],q[100086];
+list <int> v[101];//按价格分类的多个点集
+int n,m,ans;
+void bfs1()
+{//正向广搜到的点flag=-1
+q[0] = 1;
+flag[1] = -1;
+int t=0,w=0;//广搜所用队列的头尾指针
+do{
+	int h=q[t++];
+	for(int i=0;i<a[h].size();i++)
+		if(flag[a[h][i]]==0)
+			flag[q[++w]=a[h][i]]=-1;
+	}while (t <= w);
+}
+void bfs2()
+{//逆向广搜到flag=-1的点并改为-2（交集标志）
+q[0]=n;
+flag[n]=-2;
+int t=0,w=0;
+do{
+	int h = q[t++];
+	for (int i = 0; i < b[h].size(); i++)
+		{
+		int s = b[h][i];
+		if (flag[s] == -1)
+			{
+			flag[q[++w]=s]=-2;
+			v[p[s]].push_back(s);
+			}
+		}
+	}while (t <= w);
+v[p[n]].push_back(n);
+}
+void bfs3(int m)
+{//从价格m的点出发广搜交集中尚未买到水晶球的点并计算在此点卖出能赚的最多的前存入flag
+list <int>::iterator it;
+int t=0,w=0;
+for(it=v[m].begin();it!=v[m].end();it++)
+	if(flag[*it]<0)//此为买入点，进任务队
+		flag[q[w++]=*it]=0;//价格m且未搜过的点批量进队
+do
+	{int h=q[t++];
+	for(int i=0;i<a[h].size();i++)
+		{
+		int s=a[h][i];//h的子节点
+		if(flag[s]==-2)//只在交集中广搜
+			{flag[q[w++]=s]=p[s]-m;
+			ans=max(ans,flag[s]);
+			}
+		}
+	}while (t < w);
+}
+int main()
+{
+cin >> n >> m;
+for (int i = 1; i <= n; i++)
+	cin >> p[i];
+for (int i = 1; i <= m; i++)
+	{
+	int x,y,z;
+	cin >> x >> y >> z;
+	a[x].push_back(y);
+	b[y].push_back(x);
+	if (z == 2)
+		{
+		a[y].push_back(x);
+		b[x].push_back(y);
+		}
+	}
+bfs1();
+bfs2();
+for (int i = 1; i < 100 - ans; i++)
+	bfs3(i);
+cout << ans << endl;
+system("pause");
+return 0;
+}
+此题并非单源最短路的问题，但与最短路同为在图的背景下进行的组合优化问题，
+那么最短路中的SPFA算法能否借用于此呢？
+SPFA算法的实质是沿着各条弧的指向不断刷新某个特征值的标记，只要没有负环（权值总和小于0的圈），目的便可实现。
+因此，从出发点向后刷新可得到各点的水晶球最小买入价，
+反之，从目标点向回刷新可得到各点今后的最大卖出价。
+两种刷新可同时使用，也可一种刷新配合一轮搜索，甚至把两轮相反方向的刷新合为一轮同向刷新。
+方法3 利用SPFA算法的3个参考代码
+代码1 正、反两轮SPFA刷新
+#include<fstream>
+using namespace std;
+ifstream cin("trade.in");
+ofstream cout("trade.out");
+int a[500001],b[500001],*f[100001],*h[100001],g[100001],e[100001],c[100001],d[100001],q[100001];
+int main()
+{
+int tt=clock();
+int n,m,i,j,x,y,z,t,w;
+cin>>n>>m;
+for(i=1;i<=n;i++)
+	cin>>q[i];
+for(i=1;i<=m;i++)
+	{
+	cin>>x>>y>>z;
+	c[x]++;
+	d[y]++;
+	a[i]=x;
+	b[i]=y;
+	if(z==2)
+		{
+		c[y]++;
+		d[x]++;
+		b[i]=-b[i];
+		}
+	}
+cout<<(clock()-tt)/1000.0<<endl;
+for(i=1;i<=n;i++)
+	{//量身定制邻接表
+		h[i]=new int[c[i]];//邻接表
+		f[i]=new int[d[i]];//逆向邻接表
+	}
+	for(i=1;i<=m;i++)
+	{
+		x=a[i];
+		y=b[i];
+		if(y<0)y=-y;
+		h[x][g[x]++]=y;
+		f[y][e[y]++]=x;
+		if(b[i]<0)
+		{//可逆向边
+			h[y][g[y]++]=x;
+			f[x][e[x]++]=y;
+		}
+	}
+cout<<(clock()-tt)/1000.0<<endl;
+	t=w=0;
+	memset(b,0,sizeof(b));
+	memset(g,127,sizeof(g));
+	b[1]=1;
+	g[1]=q[1];
+	a[0]=1;
+	do
+	{
+		x=a[t];
+		for(int *p=h[x];p<h[x]+c[x];p++)
+			if((y=min(g[x],q[*p]))<g[*p])
+			{
+				g[*p]=y;
+				if(b[*p]==0)
+					b[a[++w]=*p]=1;
+			}
+		b[x]=0;
+	}while(++t<=w);
+	memset(b,0,sizeof(b));
+	memset(e,0,sizeof(e));
+	t=w=0;
+	a[0]=n;
+	b[n]=1;
+	do
+	{
+		x=a[t];
+		for(int *p=f[x];p<f[x]+d[x];p++)
+			if((y=max(e[x],q[*p]))>e[*p])
+			{
+				e[*p]=y;
+				if(b[*p]==0)
+					b[a[++w]=*p]=1;
+			}
+		b[x]=0;
+	}while(++t<=w);
+	z=0;
+	for(i=1;i<=n;i++)
+		z=max(z,e[i]-g[i]);
+	cout<<z<<endl;
+cout<<(clock()-tt)/1000.0;
+	return 0;
+}
+代码2 反SPFA、正广搜，枚举买入点
+#include <iostream>
+using namespace std;
+int q[100001], f[100001], a[100001];
+bool b[100001];
+struct node
+{
+  int d;
+  node *next;
+}*h[100001], *r[100001];//正、反邻接表
+int main()
+{
+int n, m, i, t, w, d = 0, x, y, z, l;
+node *p;
+cin >> n >> m;
+for (i = 1; i <= n; i++)
+  cin >> q[i];
+for (i = 1; i <= m; i++)
+  {
+  cin >> x >> y >> z;
+  p = new node;
+  p -> d = y;
+  p -> next = h[x];
+  h[x] = p;
+  p = new node;
+  p -> d = x;
+  p -> next = r[y];
+  r[y] = p;
+  if (z == 2)
+    {
+    p = new node;
+    p -> d = x;
+    p -> next = h[y];
+    h[y] = p;
+    p = new node;
+    p -> d = y;
+    p -> next = r[x];
+    r[x] = p;
+    }
+  }
+//spfa begin
+t=w=1;//对头队尾
+f[n]=q[n];
+a[t]=n;//任务队列初始化
+b[n] = 1;
+do
+  {
+  p=r[a[t]];
+  while (p > 0)
+    {
+    if ((l = max(f[a[t]], q[p -> d])) > f[p -> d])
+      {
+      f[p -> d] = l;
+      if (b[p -> d] == 0)
+        {
+        a[++w] = p -> d;
+        b[p -> d] = 1;
+        }
+      }
+    p = p -> next;
+    }
+  b[a[t]] = 0;
+  }while (++t <= w);memset(b, 0, sizeof(b));
+a[1] = 1;//bfs begin
+t = w = 1;
+b[1] = 1;
+do
+  {
+  for (p = h[a[t]]; p > 0; p = p -> next)
+    {
+    if (b[p -> d] == 0)
+      {
+      a[++w] = p -> d;
+      b[p -> d] = 1;
+      d = max(d, f[a[w]] - q[a[w]]);
+      }
+    }
+  }while (++t <= w);
+cout << d << endl;
+system("pause");
+return 0;
+}
+代码3 一轮SPFA，求各点能赚到的最多钱数e[i]，g[i]与e[i]两个函数之一被刷新就进入任务队列
+#include<fstream>
+using namespace std;
+ifstream cin("trade.in");
+ofstream cout("trade.out");
+int a[500001],b[500001], *h[100001],g[100001],e[100001],c[100001],q[100001];
+int main()
+{
+int tt=clock();
+int n,m,i,j,x,y,z,t,w;
+cin>>n>>m;
+for(i=1;i<=n;i++)
+	cin>>q[i];
+for(i=1;i<=m;i++)
+	{
+	cin >> x >> y >> z;
+	c[x]++;
+	a[i] = x;
+	b[i] = y;
+	if(z == 2)
+		{
+		c[y]++;
+		b[i]=-b[i];
+		}
+	}
+for(i = 1; i <= n; i++)
+	h[i]=new int[c[i]];//定量分配邻接表空间
+for(i=1;i<=m;i++)
+	{
+	x=a[i];
+	y=b[i];
+	if(y < 0) y = -y;
+	h[x][g[x]++]=y;
+	if(b[i]<0)
+		h[y][g[y]++]=x;
+	}
+t=w=0;
+memset(b,0,sizeof(b));
+memset(g,127,sizeof(g));
+memset(e,0,sizeof(e));
+b[1]=1;
+g[1]=q[1];
+a[0]=1;
+do{
+	x=a[t];
+	for(int *p = h[x]; p < h[x] + c[x]; p++) {
+		if((y=min(g[x],q[*p])) < g[*p]) 
+			{
+			g[*p]=y;
+			if(b[*p] == 0)//*p未在任务队列
+				b[a[++w]=*p]=1;
+			}
+		if((y = max(e[x],q[*p]-g[*p]))>e[*p])
+			{
+			e[*p]=y;
+			if(!b[*p])//*p未在任务队列
+				b[a[++w]=*p]=1;
+			}
+		}
+	b[x]=0;
+	}while(++t<=w);
+cout << e[n] << endl;
+cout << (clock() - tt) / 1000.0;
+return 0;
+}
+
+方法4 tarjan缩圈
+有向图不一定能拓扑，但再不影响题目答案的前提下，将原来的图重构一个拓扑图也是可能的。
+如果能把图中的连通分支缩成一个点，让该点的买入价取分支中的最小价格，
+而其卖出价取分支中的最大价格，图就能拓扑了，也就可以用方法1的动归算法了。
+TARJAN求连通分支的算法为我们提供了把连通分支缩成一点的途径。具体方法如下：
+  我们知道，无论是BFS还是DFS，都可以把某点搜到的点视为其子节点，由此可构成一棵搜索树。
+TARJAN算法可用DFS结合时间记录（即“时间戳”）来得到极大连通分支。
+所谓时间戳记录的是搜索路径上各点被搜到的时间或先后顺序，每个点可以记录自己的时间顺序，
+更需要记录其子树能走到之点的最小时间戳。如果我们用并查集来表示连通分支，
+那么，自身时间戳大于其最小时间戳的点就可以把这个取最小时间戳的点作为并查树中的父节点。否则自己就是并查树的根节点。
+利用TARJAN搜索得到的并查集，可重构原图得到一个拓扑图，且可以保证此拓扑图的美一点都是1通向n路径上的点。当然，此时原来的n也许有了改变。
+参考代码如下：
+//10.in 190ms,并查集表示极大强联通分支
+#include<cstdlib>
+#include<vector>
+#include<fstream>
+using namespace std;
+ifstream cin("trade.in");
+ofstream cout("trade.out");
+vector<int> t,nb[100001];
+pair<int,int>e[500000],p00;//e存弧以便二次构图，p00=（0,0）
+int f[100001],g[100001],a[100001],b[100001],h[100001],l[100001],p[100001];//l[点号]=子节点最小栈深度，a是栈，p是并查树父指针
+int c,d,z,n,m,i,j,k,u,v,w;
+int bc(int x)
+{//找并查集树根
+if(p[x]==x||p[x]==0) return x;
+return p[x]=bc(p[x]);
+}
+int tarjan(int x,int t)
+{//递归深搜x点，栈深度是t
+if(p[x]==0&&l[x]>0) return l[x];
+int i,j,k;
+if(l[x]==0)//x未搜过
+  {a[l[x]=t]=x;
+  for(i=0;i<nb[x].size();i++)
+    {j=nb[x][i];
+    l[x]=min(l[x],tarjan(j,t+1));}
+  p[x]=a[l[x]];
+  return l[x];
+  }
+k=bc(x);//开始处理x搜过但此时不在栈
+if(p[k]==0) return l[k];
+ else return 100000;
+}
+int main()
+{int tt=clock();
+cin>>n>>m;
+for(i=1;i<=n;i++)
+  {
+  cin>>b[i];
+  g[i]=b[i];//g[i]最小买入价
+  }
+for(i=0;i<m;i++)
+  {
+  cin>>u>>v>>w;
+  nb[u].push_back(v);
+  e[i]=make_pair(u,v);
+  if(w>1)
+    nb[v].push_back(u);
+  }
+tarjan(1,1);
+//下面开始重构拓扑图
+for(i=1;i<=n;i++)
+  {
+  if(l[i]>0)//从1能走到i
+    {z=bc(i);//z是本分支树根
+    g[z]=min(g[z],g[i]);
+    b[z]=max(b[z],b[i]);//最大卖出价
+    }
+  nb[i].clear();
+  }//重构图中点权数据更新完毕
+for(i=0;i<m;++i)
+  if(l[e[i].first]>0)//此弧TARJAN访问过
+    e[i]=make_pair(bc(e[i].first),bc(e[i].second));//弧更新
+  else e[i]=p00;//不属于子图的弧置0，以便删除
+sort(e,e+m);//排序后容易识别费弧和重弧
+while(k<m&&e[k].first==e[k].second) ++k;
+e[j]=e[k];//j此时为0,k之前的弧均为费弧
+nb[e[k].first].push_back(e[k].second);//重构新图邻接表
+h[e[k].second]++;//入度计数器
+for(i=k+1;i<m;i++)
+  if(e[i].first!=e[i].second && e[i]!=e[i-1])//i号弧非自环非重弧
+    {e[++j]=e[i];//此弧属于重构子图
+    nb[e[i].first].push_back(e[i].second);
+    h[e[i].second]++;
+    }
+t.push_back(1);//初始化拓扑栈t
+f[1]=b[1]-g[1];//到此点时能赚的最多的钱
+n=p[n];//n点可能已经改变
+do{//开始拓扑动归
+  c=t.back();
+  t.pop_back();
+  for(i=0;i<nb[c].size();i++)
+    {d=nb[c][i];
+    g[d]=min(g[d],g[c]);
+    f[d]=max(f[d],f[c]);
+    if(--h[d]==0)//入度已经饱和，可进入拓扑集合
+      {
+      t.push_back(d);
+      f[d]=max(f[d],b[d]-g[d]);//在d点卖出的情况也应考虑
+      }
+    }
+  }while(!t.empty());
+cout<<f[n]<<endl;
+cout<<clock()-tt;
+return 0;
+}
+
+例题二 NOIP提高组2014DAY2
+2．寻找道路
+(road.cpp/c/pas)
+【问题描述】
+在有向图G中，每条边的长度均为1，现给定起点和终点，
+请你在图中找一条从起点到终点的路径，该路径满足以下条件：
+  1．路径上的所有点的出边所指向的点都直接或间接与终点连通。
+  2．在满足条件 1 的情况下使路径最短。
+注意：图G中可能存在重边和自环，题目保证终点没有出边。
+请你输出符合条件的路径的长度。
+输入文件名为 road.in。
+第一行有两个用一个空格隔开的整数 n 和 m，表示图有 n 个点和 m 条边。
+接下来的m行每行2个整数 x、y，之间用一个空格隔开，表示有一条边从点 x 指向点y。
+最后一行有两个用一个空格隔开的整数 s、t，表示起点为 s，终点为 t。
+输出文件名为 road.out。
+输出只有一行，包含一个整数，表示满足题目描述的最短路径的长度。如果这样的路径不存在，输出-1。
+【输入输出样例 1】
+road.in     road.out
+3 2      -1
+1 2
+2 1
+1 3
+【输入输出样例说明】
+如上图所示，箭头表示有向道路，圆点表示城市。起点1与终点3不连通，
+所以满足题目描述的路径不存在，故输出-1。
+【输入输出样例 2】
+road.in        road.out
+6 6            3
+1 2
+1 3
+2 6
+2 5
+4 5
+3 4
+1 5
+【输入输出样例说明】
+如图所示，满足条件的路径为1->3->4->5。
+注意点 2 不能在答案路径中，因为点 2连了一条边到点 6，而点 6 不与终点 5 连通。
+【数据说明】
+对于 30%的数据，0<n<10，0<m<20；
+对于60%的数据，0 <  n<100，0<m<2000；
+对于100%的数据，0<n<10000，0<m<200000，
+0<=x，y，s，t<=n，s≠t。
+
+分析：可以看出，这是无权有向图上求符合特定条件的最短路的问题。
+由于存在重边、自环和圈等干扰，也可考虑重构一个排除了上述干扰、条件更单纯的子图，再求最短路就行了。
+由于条件中强调最短路上的点的邻域必须都能通向目标点，因此从目标点反搜就能有效地判定各点是否符合此核心条件。
+用符合此条件的点重构子图之后，各种最短路方法都能求出答案。
+代码1 反向广搜构建子图，正向广搜求最短路
+//10.in 0.25"
+#include<fstream>
+#include<vector>
+using namespace std;
+ifstream cin("road.in");
+ofstream cout("road.out");
+vector <int> g[10001],u[10001];//正、反邻接表
+int n,m,i,j;
+int a[10001],b[10001],c[10001];//逆广搜标志、子图标志、正广搜得到的距离
+bool r[10001][10001];//用于去掉重边
+void input(int m)
+{//输入m条弧
+int x,y;
+for(i=1;i<=m;i++)
+	{
+	cin>>x>>y;
+	if (x!=y&&r[x][y]==0)//非自环非重边
+		{
+		r[x][y]=1;
+		g[x].push_back(y);
+		u[y].push_back(x);
+		}
+	}
+}
+void bfs(int x)
+{//反向bfs
+int q[10001]={x},f=0,t=0,k;
+a[x]=1;
+do{
+	j=q[f];
+	for(i=0;i<u[j].size();i++)
+		{
+		k=u[j][i];
+		if(a[k]==0)
+			{
+			q[++t]=k;
+			a[k]=1;
+			}
+		}
+	f++;
+	}while (f<=t);
+}
+void bfsz(int x)
+{//正向bfs
+int q[10001]={x},f=0,t=0,k;
+c[x]=1;
+do{
+	j=q[f];
+	for (i=0;i<g[j].size();i++)
+		{
+		k=g[j][i];
+		if(b[k]>0&&c[k]==0)//k属于子图且未搜过
+			{
+			q[++t]=k;
+			c[k]=c[j]+1;//记录k点最短路长度
+			}
+		}
+	f++;
+	}while (f<=t);
+}
+int main()
+{int tt=clock();
+int s,t;
+cin>>n>>m;
+input(m);
+cin>>s>>t;
+bfs(t);
+for(i=1;i<=n;i++)
+	{//a已标记反搜点，再用b标记寻找道路的子图
+	for(j=0;j<g[i].size();j++)
+		if(a[g[i][j]]==0)
+			break;
+	b[i]=(j==g[i].size());
+	}
+bfsz(s);//在b标记的子图中搜索道路
+cout<<c[t]-1<<endl;
+cout<<clock()-tt;
+return 0;
+}
+此代码严格阻断了第一次构图时的自环和重边，但空间代价已经接近竞赛限制，还专门用了二重循环构造b子图,
+而且由于两次搜索方向相反，所以构造的邻接表也是正反双份的，对这些做法都有简化的余地。
+代码2 反向构图，不判重边，深搜重构子图，反向迪杰斯特拉堆描述求最短路。
+//10.in 109ms 
+#include<iostream> 
+#include<queue>
+#include<ctime>
+#include<memory.h>
+#include<vector>
+using namespace std;
+int f[10001];//f[i]存s到i的距离
+struct cmp
+{//定义上小下大的索引堆比较结构
+bool operator()(const int &a,const int &b)
+	{return f[a]>f[b];}
+};
+struct node
+{
+	int a,b;
+}nd;
+int n,m,j,e,s,x,y,c,d=-1;
+vector <int> g[10001];//逆邻接表
+int l[10002],h[10001];//dfs标志及出度计数器
+int djs_heap(int x)
+{//从x出发做迪杰斯特拉的堆处理过程
+int i,j,k;
+memset(f,63,sizeof(f));
+f[x]=0;
+priority_queue<int,vector<int>,cmp>q;//用f的下标构造的堆
+q.push(x);
+do{
+	j=q.top();
+	q.pop();
+	for(i=0;i<g[j].size();i++)
+		if(f[j]+1<f[k=g[j][i]]&&h[k]==0)
+			{//j刷得动k且k在子图内
+			f[k]=f[j]+1;
+			q.push(k);
+			}
+	}while(!q.empty());
+if(f[s]<10000) return f[s];
+return -1;
+}
+void dfs(int x)
+{//反向深搜x
+h[x]--;//出度计数器饱和1度
+if(l[x]>0) return;//x被搜过
+l[x]=1;
+for(int i=0;i<g[x].size();i++)
+	dfs(g[x][i]);//继续递归深搜
+}
+int main()
+{
+int i,tt=clock();
+cin>>n>>m;
+for(i=1;i<=m;i++)
+	{
+	cin>>x>>y;
+	if(x!=y)
+		{//仅限制自环忽略重边
+		g[y].push_back(x);
+		h[x]++;
+		}
+	}
+cin>>s>>e;
+dfs(e);
+cout<<djs_heap(e);
+return 0;
+}
+练习
+1 用SPFA解决例题二
+2 sort
+题目描述
+有n个数A1..An，已知一些它们之间的大小关系，形如某个数不小于某个数。
+把这n个数分成尽量少个集合，使得每个集合内的任意两个数的大小关系都是未知的。
+输入文件
+第一行 n m 表示有n个数，m个大小关系。
+接下来m行，每行 i j 表示 Ai>=Aj。
+输出文件
+	一行包含一个整数，最少要分成多少个集合。
+样例输入
+4 4
+	1 2
+1 3
+1 4
+4 1
+样例输出
+3
+样例解释
+2 3在同一个集合，1在一个集合，4在一个集合。
+数据约定
+20%：n<=18
+60%：n<=10000
+100%：n<=100000，m<=1000000
+数据见附录
